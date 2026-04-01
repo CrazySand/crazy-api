@@ -1,0 +1,181 @@
+from enum import IntEnum
+from typing import NoReturn
+
+from pydantic import BaseModel
+
+
+class ApiCode(IntEnum):
+    OK = 10000                  # 请求成功
+    BAD_REQUEST = 10400         # 请求参数错误
+    UNAUTHORIZED = 10401        # 未认证或登录失效
+    FORBIDDEN = 10403           # 已认证但无权限
+    NOT_FOUND = 10404           # 资源不存在
+    VALIDATION_ERROR = 10422    # 参数校验失败
+    RATE_LIMITED = 10429        # 请求过于频繁
+    INTERNAL_ERROR = 10500      # 服务器内部错误
+
+
+class ApiResponse(BaseModel):
+    code: ApiCode
+    msg: str
+    data: dict | list | None = None
+
+
+class ApiResponseError(Exception):
+    """
+    携带统一 ApiResponse 的业务异常 供全局处理器序列化后返回客户端
+    """
+
+    def __init__(self, body: ApiResponse) -> None:
+        """
+        绑定待返回的统一响应体
+
+        Args:
+            body (ApiResponse): 与 response 模块工厂函数构造结果一致
+        """
+        self.body = body
+        super().__init__(body.msg)
+
+
+def build_response(code: ApiCode, msg: str, data: dict | list | None = None) -> ApiResponse:
+    """
+    构建统一响应对象
+
+    Args:
+        code (ApiCode): 业务状态码
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 统一响应对象
+    """
+    return ApiResponse(code=code, msg=msg, data=data)
+
+
+def ok(msg: str = "ok", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建成功响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 成功响应对象
+    """
+    return build_response(ApiCode.OK, msg, data)
+
+
+def bad_request(msg: str = "bad request", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建参数错误响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 参数错误响应对象
+    """
+    return build_response(ApiCode.BAD_REQUEST, msg, data)
+
+
+def unauthorized(msg: str = "unauthorized", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建未认证响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 未认证响应对象
+    """
+    return build_response(ApiCode.UNAUTHORIZED, msg, data)
+
+
+def raise_unauthorized(
+    msg: str = "未登录或令牌无效",
+    data: dict | list | None = None,
+) -> NoReturn:
+    """
+    抛出未认证 ApiResponseError 供全局异常处理器序列化为 HTTP 响应
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Raises:
+        ApiResponseError: 始终抛出 且 body 为未认证业务码
+    """
+    raise ApiResponseError(unauthorized(msg, data))
+
+
+def forbidden(msg: str = "forbidden", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建无权限响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 无权限响应对象
+    """
+    return build_response(ApiCode.FORBIDDEN, msg, data)
+
+
+def not_found(msg: str = "not found", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建资源不存在响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 资源不存在响应对象
+    """
+    return build_response(ApiCode.NOT_FOUND, msg, data)
+
+
+def validation_error(msg: str = "validation error", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建参数校验失败响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 参数校验失败响应对象
+    """
+    return build_response(ApiCode.VALIDATION_ERROR, msg, data)
+
+
+def rate_limited(msg: str = "rate limited", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建请求过于频繁响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 请求过于频繁响应对象
+    """
+    return build_response(ApiCode.RATE_LIMITED, msg, data)
+
+
+def internal_error(msg: str = "internal error", data: dict | list | None = None) -> ApiResponse:
+    """
+    构建服务器内部错误响应对象
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        ApiResponse: 服务器内部错误响应对象
+    """
+    return build_response(ApiCode.INTERNAL_ERROR, msg, data)
