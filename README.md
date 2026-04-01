@@ -14,18 +14,17 @@ python -m app.main
 
 ## 访问日志白名单
 
-`ApiAccessLog` 由中间件按规则写入。仅当请求路径命中**白名单**、已匹配到 `endpoint` 且 **HTTP 状态码为 200** 时写入（201、204 等其它 2xx 不记）。
+`ApiAccessLog` 在返回统一 **`ApiResponse`** 时写入（路由中 `await response.respond_json(request, ...)`，全局异常处理器内亦会写入），**不经过**读响应体。仅当请求路径命中**白名单**、已匹配到 `endpoint` 且 **HTTP 状态码为 200**（与统一 JSON 约定一致）时写入。
 
 配置项 **`access_log_whitelist`**：逗号分隔；路径**等于**某项，或**以「该项 + `/`」为前缀**，则允许记录。默认为 **`/api`**；需要同时记录 `/health` 时可设为 `/api,/health`。
 
-## 访问日志 JSON 与排除路径
+## 访问日志排除与字段
 
-命中白名单且**未命中排除**且 HTTP 200 时，除 `method`、`path`、`duration_ms`、`client_ip` 外，可记录 **`api_code` / `api_msg`**（数据库字段，见 `app/models/api_access_log.py`）。
+命中白名单且**未命中排除**时，除 `method`、`path`、`duration_ms`、`client_ip` 外，记录 **`api_code` / `api_msg`**，直接取自 **`ApiResponse.code` / `ApiResponse.msg`**（`msg` 截断至与模型一致，当前 `CharField` 上限 512），**不序列化 `data`**，大字段不会影响日志性能。
 
-- **`Content-Type` 含 `application/json`** 时，中间件会读完整响应体（有 `body()` 则 `await response.body()`，否则拼接 `body_iterator`，与 Starlette 内部包装方式有关）并解析顶层 **`code`**、**`msg`**；`msg` 入库时截断至与模型字段一致的长度（当前 `CharField` 上限 512）  
-- **`access_log_exclude_paths`**：逗号分隔，路径匹配规则与**白名单相同**（等于或「前缀 + `/`」子路径）；**命中则不写入 `ApiAccessLog`**。若希望「整段 `/api` 都记、只剔除少数路径」，白名单写 `/api` 并把需剔除的路径列在此处  
+- **`access_log_exclude_paths`**：逗号分隔，路径匹配规则与**白名单相同**；**命中则不写入 `ApiAccessLog`**
 
-已有数据库需为表 `api_access_log` 增加列 **`api_code`**（可空整型）、**`api_msg`**（可空字符串，长度与模型一致），或使用 Tortoise 迁移 / `generate_schemas` 按环境执行。
+已有数据库需为表 `api_access_log` 配置列 **`api_code`**、**`api_msg`**（见 `app/models/api_access_log.py`），或使用 Tortoise 迁移 / `generate_schemas` 按环境执行。
 
 ## 客户端 IP 与会话约定（`client_ip_source`）
 

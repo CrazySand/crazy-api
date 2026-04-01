@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from slowapi.middleware import SlowAPIMiddleware
 from tortoise import Tortoise
 
@@ -41,8 +41,8 @@ app.include_router(api_router)
 
 
 @app.get("/health")
-async def health():
-    return response.ok()
+async def health(request: Request):
+    return await response.respond_ok(request)
 
 
 if __name__ == "__main__":

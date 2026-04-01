@@ -1,6 +1,8 @@
 from enum import IntEnum
 from typing import NoReturn
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 
@@ -179,3 +181,175 @@ def internal_error(msg: str = "internal error", data: dict | list | None = None)
         ApiResponse: 服务器内部错误响应对象
     """
     return build_response(ApiCode.INTERNAL_ERROR, msg, data)
+
+
+async def respond_json(request: Request, body: ApiResponse) -> JSONResponse:
+    """
+    将 ApiResponse 序列化为 JSON 响应并写入访问日志
+
+    Args:
+        request (Request): 请求对象
+        body (ApiResponse): 统一响应体
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    from app.core.access_log import record_api_access_log
+
+    await record_api_access_log(request, body)
+    return JSONResponse(
+        status_code=200,
+        content=body.model_dump(mode="json"),
+    )
+
+
+async def respond_ok(
+    request: Request,
+    msg: str = "ok",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    成功响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, ok(msg=msg, data=data))
+
+
+async def respond_bad_request(
+    request: Request,
+    msg: str = "bad request",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    参数错误响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, bad_request(msg=msg, data=data))
+
+
+async def respond_unauthorized(
+    request: Request,
+    msg: str = "unauthorized",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    未认证响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, unauthorized(msg=msg, data=data))
+
+
+async def respond_forbidden(
+    request: Request,
+    msg: str = "forbidden",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    无权限响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, forbidden(msg=msg, data=data))
+
+
+async def respond_not_found(
+    request: Request,
+    msg: str = "not found",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    资源不存在响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, not_found(msg=msg, data=data))
+
+
+async def respond_validation_error(
+    request: Request,
+    msg: str = "validation error",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    参数校验失败响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, validation_error(msg=msg, data=data))
+
+
+async def respond_rate_limited(
+    request: Request,
+    msg: str = "rate limited",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    请求过于频繁响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, rate_limited(msg=msg, data=data))
+
+
+async def respond_internal_error(
+    request: Request,
+    msg: str = "internal error",
+    data: dict | list | None = None,
+) -> JSONResponse:
+    """
+    服务器内部错误响应写入访问日志并返回 JSON
+
+    Args:
+        request (Request): 请求对象
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Returns:
+        JSONResponse: HTTP 200 JSON 响应
+    """
+    return await respond_json(request, internal_error(msg=msg, data=data))

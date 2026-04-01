@@ -26,8 +26,8 @@ async def get_my_profile(
     Returns:
         ApiResponse: 含用户概要字段的标准响应
     """
-    _ = request
-    return response.ok(
+    return await response.respond_ok(
+        request,
         data={
             "user_id": str(user.user_id),
             "username": user.username,

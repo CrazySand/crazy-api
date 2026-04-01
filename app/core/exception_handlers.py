@@ -35,10 +35,8 @@ def register_exception_handlers(app: FastAPI) -> None:
         if first_error:
             message = first_error.get("msg", message)
 
-        payload = response.validation_error(msg=message, data=errors)
-        return JSONResponse(
-            status_code=200,
-            content=payload.model_dump(mode="json"),
+        return await response.respond_validation_error(
+            request, msg=message, data=errors
         )
 
     async def handle_api_response_error(
@@ -54,10 +52,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 与路由直接 return ApiResponse 时结构一致
         """
-        return JSONResponse(
-            status_code=200,
-            content=exc.body.model_dump(mode="json"),
-        )
+        return await response.respond_json(request, exc.body)
 
     async def handle_rate_limit_exceeded(
         request: Request, exc: RateLimitExceeded
@@ -76,11 +71,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         msg = "请求过于频繁"
         if detail:
             msg = str(detail)
-        payload = response.rate_limited(msg=msg)
-        return JSONResponse(
-            status_code=200,
-            content=payload.model_dump(mode="json"),
-        )
+        return await response.respond_rate_limited(request, msg=msg)
 
     app.add_exception_handler(RequestValidationError,
                               handle_request_validation_error)

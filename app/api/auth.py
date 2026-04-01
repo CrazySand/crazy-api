@@ -3,6 +3,7 @@ import re
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, field_validator
 
+from app.core import access_log
 from app.core.rate_limit import LOGIN_PER_IP, REGISTER_PER_IP, limiter
 from app.core.settings import get_settings
 from app.services import auth_service
@@ -54,7 +55,8 @@ async def register(request: Request, payload: RegisterRequest):
     """注册"""
     try:
         user = await auth_service.register_user(payload.username, payload.password, payload.nickname)
-        return response.ok(
+        return await response.respond_ok(
+            request,
             msg="注册成功",
             data={
                 "user_id": str(user.user_id),
@@ -63,7 +65,7 @@ async def register(request: Request, payload: RegisterRequest):
             },
         )
     except ValueError as exc:
-        return response.bad_request(str(exc))
+        return await response.respond_bad_request(request, msg=str(exc))
 
 # ============================== 登录 ==============================
 
@@ -94,7 +96,9 @@ async def login(request: Request, payload: LoginRequest):
     try:
         user = await auth_service.login_user(payload.username, payload.password)
         access_token = auth_service.create_access_token_for_user(user)
-        return response.ok(
+        access_log.set_access_log_user_id(request, user.user_id)
+        return await response.respond_ok(
+            request,
             msg="登录成功",
             data={
                 "nickname": user.nickname,
@@ -102,4 +106,4 @@ async def login(request: Request, payload: LoginRequest):
             },
         )
     except ValueError as exc:
-        return response.bad_request(str(exc))
+        return await response.respond_bad_request(request, msg=str(exc))
