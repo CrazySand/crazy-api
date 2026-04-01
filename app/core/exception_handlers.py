@@ -29,7 +29,6 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 统一响应对象
         """
-        _ = request  # 标记 request 参数当前未使用
         errors = jsonable_encoder(exc.errors())
         first_error = errors[0] if errors else None
         message = "请求参数校验失败"
@@ -55,7 +54,6 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 与路由直接 return ApiResponse 时结构一致
         """
-        _ = request
         return JSONResponse(
             status_code=200,
             content=exc.body.model_dump(mode="json"),
@@ -74,7 +72,6 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 业务码 RATE_LIMITED
         """
-        _ = request
         detail = getattr(exc, "detail", None)
         msg = "请求过于频繁"
         if detail:

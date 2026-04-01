@@ -1,18 +1,16 @@
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 from starlette.requests import Request
 
+from app.core.client_ip import get_client_ip_for_rate_limit
 from app.core.security import TokenManager
 
 
 LOGIN_PER_IP = "10/minute"        # 登录：单 IP 每分钟最多 10 次
 REGISTER_PER_IP = "10/minute"     # 注册：单 IP 每分钟最多 10 次
-
-# GET /api/user/me：按 JWT sub 分桶，与 LOGIN_PER_IP 等 IP 桶独立
-USER_ME_PER_USER = "60/minute"
+USER_ME_PER_USER = "60/minute"    # 获取个人信息：单用户每分钟最多 60 次
 
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=get_client_ip_for_rate_limit,
     # 全局默认不限流，只在挂了 @limiter.limit(...) 的路由上生效
     default_limits=[],
 )
@@ -36,17 +34,17 @@ def get_user_rate_limit_key(request: Request) -> str:
     """
     authorization = request.headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
-        return get_remote_address(request)
+        return get_client_ip_for_rate_limit(request)
 
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
-        return get_remote_address(request)
+        return get_client_ip_for_rate_limit(request)
 
     payload = TokenManager.decode(token)
     if payload is None:
-        return get_remote_address(request)
+        return get_client_ip_for_rate_limit(request)
 
     user_id = payload.get("user_id")
     if not user_id:
-        return get_remote_address(request)
+        return get_client_ip_for_rate_limit(request)
     return f"user:{user_id}"

@@ -24,3 +24,6 @@ class User(Model):
     is_deleted = fields.BooleanField(default=False)          # 逻辑删除标记
     created_at = fields.DatetimeField(auto_now_add=True)     # 创建时间
     updated_at = fields.DatetimeField(auto_now=True)         # 更新时间
+
+    class Meta:
+        table = "user"
