@@ -96,7 +96,8 @@ async def login(request: Request, payload: LoginRequest):
     try:
         user = await auth_service.login_user(payload.username, payload.password)
         access_token = auth_service.create_access_token_for_user(user)
-        access_log.set_access_log_user_id(request, user.user_id)
+        # 登录请求在中间件阶段尚无 Bearer 令牌，先把 user_id 写到 request.state 供访问日志使用
+        access_log.set_access_log_user_id(request, user.user_id)  
         return await response.respond_ok(
             request,
             msg="登录成功",

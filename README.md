@@ -20,7 +20,7 @@ python -m app.main
 
 ## 访问日志白名单
 
-`ApiAccessLog` 在返回统一 **`ApiResponse`** 时写入（路由中 `await response.respond_json(request, ...)`，全局异常处理器内亦会写入），**不经过**读响应体。仅当请求路径命中**白名单**、已匹配到 `endpoint` 且 **HTTP 状态码为 200**（与统一 JSON 约定一致）时写入。
+`ApiAccessLog` 在返回统一 **`ApiResponse`** 时写入（路由中 `await response.respond_xxx(...)`，全局异常处理器内亦会写入），**不经过**读响应体。仅当请求路径命中**白名单**、已匹配到 `endpoint` 且 **HTTP 状态码为 200**（与统一 JSON 约定一致）时写入。
 
 配置项 **`access_log_whitelist`**：逗号分隔；路径**等于**某项，或**以「该项 + `/`」为前缀**，则允许记录。默认为 **`/api`**；需要同时记录 `/health` 时可设为 `/api,/health`。
 

@@ -29,6 +29,8 @@ def setup_middleware(app: FastAPI) -> None:
     async def limit_request_body(request: Request, call_next):
         """
         超限则直接返回业务错误响应 不进入路由与 JSON 解析
+        此处虽调用 respond_bad_request 但通常不会写入 ApiAccessLog
+        原因是中间件短路返回时 endpoint 常为 None 会被访问日志条件过滤
 
         Args:
             request (Request): 请求对象

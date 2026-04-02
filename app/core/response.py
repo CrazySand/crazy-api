@@ -54,135 +54,6 @@ def build_response(code: ApiCode, msg: str, data: dict | list | None = None) -> 
     return ApiResponse(code=code, msg=msg, data=data)
 
 
-def ok(msg: str = "ok", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建成功响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 成功响应对象
-    """
-    return build_response(ApiCode.OK, msg, data)
-
-
-def bad_request(msg: str = "bad request", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建参数错误响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 参数错误响应对象
-    """
-    return build_response(ApiCode.BAD_REQUEST, msg, data)
-
-
-def unauthorized(msg: str = "unauthorized", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建未认证响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 未认证响应对象
-    """
-    return build_response(ApiCode.UNAUTHORIZED, msg, data)
-
-
-def raise_unauthorized(
-    msg: str = "未登录或令牌无效",
-    data: dict | list | None = None,
-) -> NoReturn:
-    """
-    抛出未认证 ApiResponseError 供全局异常处理器序列化为 HTTP 响应
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Raises:
-        ApiResponseError: 始终抛出 且 body 为未认证业务码
-    """
-    raise ApiResponseError(unauthorized(msg, data))
-
-
-def forbidden(msg: str = "forbidden", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建无权限响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 无权限响应对象
-    """
-    return build_response(ApiCode.FORBIDDEN, msg, data)
-
-
-def not_found(msg: str = "not found", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建资源不存在响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 资源不存在响应对象
-    """
-    return build_response(ApiCode.NOT_FOUND, msg, data)
-
-
-def validation_error(msg: str = "validation error", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建参数校验失败响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 参数校验失败响应对象
-    """
-    return build_response(ApiCode.VALIDATION_ERROR, msg, data)
-
-
-def rate_limited(msg: str = "rate limited", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建请求过于频繁响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 请求过于频繁响应对象
-    """
-    return build_response(ApiCode.RATE_LIMITED, msg, data)
-
-
-def internal_error(msg: str = "internal error", data: dict | list | None = None) -> ApiResponse:
-    """
-    构建服务器内部错误响应对象
-
-    Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-
-    Returns:
-        ApiResponse: 服务器内部错误响应对象
-    """
-    return build_response(ApiCode.INTERNAL_ERROR, msg, data)
-
-
 async def respond_json(request: Request, body: ApiResponse) -> JSONResponse:
     """
     将 ApiResponse 序列化为 JSON 响应并写入访问日志
@@ -202,6 +73,27 @@ async def respond_json(request: Request, body: ApiResponse) -> JSONResponse:
         content=body.model_dump(mode="json"),
     )
 
+# =========================================================
+
+
+def raise_unauthorized(
+    msg: str = "未登录或令牌无效",
+    data: dict | list | None = None,
+) -> NoReturn:
+    """
+    抛出未认证 ApiResponseError 供全局异常处理器序列化为 HTTP 响应
+
+    Args:
+        msg (str): 响应消息
+        data (dict | list | None): 响应数据
+
+    Raises:
+        ApiResponseError: 始终抛出 且 body 为未认证业务码
+    """
+    raise ApiResponseError(build_response(ApiCode.UNAUTHORIZED, msg, data))
+
+# =========================================================
+
 
 async def respond_ok(
     request: Request,
@@ -219,7 +111,7 @@ async def respond_ok(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, ok(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.OK, msg, data))
 
 
 async def respond_bad_request(
@@ -238,7 +130,7 @@ async def respond_bad_request(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, bad_request(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.BAD_REQUEST, msg, data))
 
 
 async def respond_unauthorized(
@@ -257,7 +149,7 @@ async def respond_unauthorized(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, unauthorized(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.UNAUTHORIZED, msg, data))
 
 
 async def respond_forbidden(
@@ -276,7 +168,7 @@ async def respond_forbidden(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, forbidden(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.FORBIDDEN, msg, data))
 
 
 async def respond_not_found(
@@ -295,7 +187,7 @@ async def respond_not_found(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, not_found(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.NOT_FOUND, msg, data))
 
 
 async def respond_validation_error(
@@ -314,7 +206,7 @@ async def respond_validation_error(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, validation_error(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.VALIDATION_ERROR, msg, data))
 
 
 async def respond_rate_limited(
@@ -333,7 +225,7 @@ async def respond_rate_limited(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, rate_limited(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.RATE_LIMITED, msg, data))
 
 
 async def respond_internal_error(
@@ -352,4 +244,4 @@ async def respond_internal_error(
     Returns:
         JSONResponse: HTTP 200 JSON 响应
     """
-    return await respond_json(request, internal_error(msg=msg, data=data))
+    return await respond_json(request, build_response(ApiCode.INTERNAL_ERROR, msg, data))
