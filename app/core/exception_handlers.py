@@ -8,6 +8,27 @@ from app.core import response
 from app.core.response import ApiResponseError
 
 
+def _validation_errors_for_response(errors: list) -> list:
+    """
+    剔除校验错误中 Pydantic 的 input 字段 避免超大或恶意内容回显
+
+    Args:
+        errors (list): jsonable_encoder 后的错误项列表
+
+    Returns:
+        list: 每项为已去掉 input 的 dict 副本
+    """
+    out: list = []
+    for item in errors:
+        if isinstance(item, dict):
+            out.append(
+                {k: v for k, v in item.items() if k != "input"}
+            )
+        else:
+            out.append(item)
+    return out
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """
     注册全局异常处理器
@@ -29,7 +50,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 统一响应对象
         """
-        errors = jsonable_encoder(exc.errors())
+        errors = _validation_errors_for_response(jsonable_encoder(exc.errors()))
         first_error = errors[0] if errors else None
         message = "请求参数校验失败"
         if first_error:

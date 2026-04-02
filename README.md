@@ -12,6 +12,12 @@ python -m app.main
 
 配置可通过环境变量覆盖，敏感项如 `JWT_SECRET`、`DB_URI` 见 `app/core/settings.py`。
 
+## 请求体大小限制
+
+应用在 `app/core/middleware.py` 中根据请求头 **`Content-Length`** 与配置 **`max_request_body_bytes`**（环境变量 **`MAX_REQUEST_BODY_BYTES`**，默认 `262144`）比较；超限则直接返回业务错误，**不进入路由与 JSON 解析**。设为 **`0`** 表示关闭该检查。
+
+**边界**：未带合法 `Content-Length`（例如 **`Transfer-Encoding: chunked`**）时，应用**无法在不大块读流的前提下**得知总长度，仍会交给下游处理；若需对这类请求也硬限制，请在 **Nginx** 等反向代理侧配置 **`client_max_body_size`**（或与所用 ASGI/网关等价能力），与上述应用层限制形成互补。
+
 ## 访问日志白名单
 
 `ApiAccessLog` 在返回统一 **`ApiResponse`** 时写入（路由中 `await response.respond_json(request, ...)`，全局异常处理器内亦会写入），**不经过**读响应体。仅当请求路径命中**白名单**、已匹配到 `endpoint` 且 **HTTP 状态码为 200**（与统一 JSON 约定一致）时写入。

@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # direct 仅用 request.client 直连或避免伪造头时使用
     client_ip_source: Literal["auto", "x_real_ip", "direct"] = "auto"
 
+    # 请求体上限 字节 依赖 Content-Length 在 JSON 解析等之前拦截 0 表示关闭
+    max_request_body_bytes: int = 262144
+
 
 @lru_cache
 def get_settings() -> Settings:
