@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Header
+from fastapi import Depends, Header
 
 from app.core import response
 from app.core.security import TokenManager
@@ -54,3 +54,6 @@ async def get_current_user(
         response.raise_unauthorized("账号已禁用")
 
     return user
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]

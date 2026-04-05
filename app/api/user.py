@@ -1,11 +1,8 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 
 from app.core import response
-from app.core.deps import get_current_user
+from app.core.deps import CurrentUser
 from app.core.rate_limit import USER_ME_PER_USER, get_user_rate_limit_key, limiter
-from app.models.user import User
 
 user_router = APIRouter()
 
@@ -14,7 +11,7 @@ user_router = APIRouter()
 @limiter.limit(USER_ME_PER_USER, key_func=get_user_rate_limit_key)
 async def get_my_profile(
     request: Request,
-    user: Annotated[User, Depends(get_current_user)],
+    user: CurrentUser,
 ):
     """
     获取个人信息
