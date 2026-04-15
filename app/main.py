@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from slowapi.middleware import SlowAPIMiddleware
 from tortoise import Tortoise
 
@@ -8,9 +8,8 @@ from app.api import api_router
 from app.core.exception_handlers import register_exception_handlers
 from app.core.middleware import setup_middleware
 from app.core.rate_limit import limiter
+from app.core.response import ApiCode, build_response
 from app.core.settings import get_settings
-from app.core import response
-
 
 settings = get_settings()
 
@@ -39,10 +38,11 @@ setup_middleware(app)
 register_exception_handlers(app)
 app.include_router(api_router)
 
-
-@app.get("/health")
-async def health(request: Request):
-    return await response.respond_ok(request)
+from fastapi import Depends
+from app.core.deps import enable_access_log
+@app.get("/health", dependencies=[Depends(enable_access_log)])
+async def health():
+    return build_response(ApiCode.OK, msg="服务正常")
 
 
 if __name__ == "__main__":

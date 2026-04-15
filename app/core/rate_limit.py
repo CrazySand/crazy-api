@@ -4,7 +4,6 @@ from starlette.requests import Request
 from app.core.client_ip import get_client_ip_for_rate_limit
 from app.core.security import TokenManager
 
-
 LOGIN_PER_IP = "10/minute"        # 登录：单 IP 每分钟最多 10 次
 REGISTER_PER_IP = "10/minute"     # 注册：单 IP 每分钟最多 10 次
 USER_ME_PER_USER = "60/minute"    # 获取个人信息：单用户每分钟最多 60 次
@@ -32,19 +31,20 @@ def get_user_rate_limit_key(request: Request) -> str:
     Returns:
         str: user:用户 ID 无令牌或解码失败时退回客户端 IP
     """
+    ip_key = get_client_ip_for_rate_limit(request)
     authorization = request.headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
-        return get_client_ip_for_rate_limit(request)
+        return ip_key
 
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
-        return get_client_ip_for_rate_limit(request)
+        return ip_key
 
     payload = TokenManager.decode(token)
     if payload is None:
-        return get_client_ip_for_rate_limit(request)
+        return ip_key
 
-    user_id = payload.get("user_id")
+    user_id = payload["user_id"]
     if not user_id:
-        return get_client_ip_for_rate_limit(request)
+        return ip_key
     return f"user:{user_id}"

@@ -25,6 +25,7 @@ def get_client_ip(request: Request) -> str | None:
             return raw.strip()
         return None
 
+    # auto 先 X-Real-IP 再无则 request.client
     raw = request.headers.get("x-real-ip")
     if raw:
         return raw.strip()

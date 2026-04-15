@@ -4,7 +4,6 @@ from app.models.user import User
 from app.core.settings import get_settings
 from app.core.security import PasswordManager, TokenManager
 
-
 settings = get_settings()
 
 

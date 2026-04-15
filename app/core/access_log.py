@@ -7,14 +7,13 @@ from fastapi import Request
 from app.core.client_ip import get_client_ip
 from app.core.response import ApiResponse
 from app.core.security import TokenManager
-from app.core.settings import get_settings
 from app.models.api_access_log import ApiAccessLog
-
 
 logger = logging.getLogger(__name__)
 
 _REQUEST_START_PERF = "request_start_perf"
 ACCESS_LOG_USER_ID_ATTR = "access_log_user_id"
+ACCESS_LOG_ENABLE_ATTR = "enable_access_log"
 
 
 def set_access_log_user_id(request: Request, user_id: UUID) -> None:
@@ -49,57 +48,6 @@ def _resolve_access_log_user_id(request: Request) -> UUID | None:
     return _bearer_user_id(request)
 
 
-def _path_matches_prefix(path: str, prefix: str) -> bool:
-    """
-    判断路径是否等于某前缀或其子路径
-
-    Args:
-        path (str): 请求路径
-        prefix (str): 前缀字符串
-
-    Returns:
-        bool: 匹配时为 True
-    """
-    p = prefix.strip()
-    if not p:
-        return False
-    return path == p or path.startswith(p + "/")
-
-
-def _is_whitelisted(path: str, whitelist: list[str]) -> bool:
-    """
-    判断路径是否命中访问日志白名单
-
-    Args:
-        path (str): 请求路径
-        whitelist (list[str]): 白名单项
-
-    Returns:
-        bool: 为 True 时允许记录
-    """
-    for raw in whitelist:
-        if _path_matches_prefix(path, raw):
-            return True
-    return False
-
-
-def _is_excluded(path: str, excludes: list[str]) -> bool:
-    """
-    判断路径是否命中排除列表
-
-    Args:
-        path (str): 请求路径
-        excludes (list[str]): 排除项
-
-    Returns:
-        bool: 为 True 时不写日志
-    """
-    for raw in excludes:
-        if _path_matches_prefix(path, raw):
-            return True
-    return False
-
-
 def _should_record(request: Request) -> bool:
     """
     判断本次请求是否应写入 ApiAccessLog
@@ -110,25 +58,7 @@ def _should_record(request: Request) -> bool:
     Returns:
         bool: 为 True 时写入
     """
-    settings = get_settings()
-    if not settings.enable_access_log:
-        return False
-    path = request.url.path
-    whitelist = [
-        p.strip()
-        for p in settings.access_log_whitelist.split(",")
-        if p.strip()
-    ]
-    if not _is_whitelisted(path, whitelist):
-        return False
-    excludes = [
-        p.strip()
-        for p in settings.access_log_exclude_paths.split(",")
-        if p.strip()
-    ]
-    if _is_excluded(path, excludes):
-        return False
-    if request.scope.get("endpoint") is None:
+    if not getattr(request.state, ACCESS_LOG_ENABLE_ATTR, False):
         return False
     return True
 
@@ -158,53 +88,56 @@ def _bearer_user_id(request: Request) -> UUID | None:
         return None
 
 
-def _duration_ms(request: Request) -> int:
+async def record_api_access_log(request: Request, body: ApiResponse) -> ApiAccessLog | None:
     """
-    根据 request.state 中的起点计算耗时毫秒
+    将统一 ApiResponse 写入 ApiAccessLog 并返回记录对象
 
     Args:
         request (Request): 请求对象
+        body (ApiResponse): 中间件从响应 body 解析得到的统一响应体
 
     Returns:
-        int: 耗时毫秒 无起点时为 0
-    """
-    start = getattr(request.state, _REQUEST_START_PERF, None)
-    if start is None:
-        return 0
-    return int(round((time.perf_counter() - start) * 1000))
-
-
-async def record_api_access_log(request: Request, body: ApiResponse) -> None:
-    """
-    将统一 ApiResponse 写入 ApiAccessLog 含 code 与 msg 不读响应体
-
-    Args:
-        request (Request): 请求对象
-        body (ApiResponse): 统一响应体
+        ApiAccessLog | None: 写入成功返回记录 否则 None
     """
     if not _should_record(request):
-        return
+        return None
     path = request.url.path
     api_msg = body.msg[:512] if body.msg else None
     try:
-        await ApiAccessLog.create(
+        return await ApiAccessLog.create(
             user_id=_resolve_access_log_user_id(request),
             method=request.method,
             path=path,
             api_code=int(body.code),
             api_msg=api_msg,
-            duration_ms=_duration_ms(request),
+            duration_ms=0,
             client_ip=get_client_ip(request),
         )
     except Exception:
         logger.exception("写入接口访问日志失败")
+        return None
 
 
-def set_request_start_perf(request: Request) -> None:
+async def update_api_access_log_duration(record_id: int, duration_ms: int) -> None:
+    """
+    按主键更新 ApiAccessLog 耗时毫秒
+
+    Args:
+        record_id (int): 日志主键
+        duration_ms (int): 全链路耗时毫秒
+    """
+    try:
+        await ApiAccessLog.filter(id=record_id).update(duration_ms=duration_ms)
+    except Exception:
+        logger.exception("回写接口访问日志耗时失败")
+
+
+def set_request_start_perf(request: Request, start: float | None = None) -> None:
     """
     在请求进入时写入 perf 起点供访问日志计算耗时
 
     Args:
         request (Request): 请求对象
+        start (float | None): 调用方传入的 perf 起点 缺省时取当前时刻
     """
-    setattr(request.state, _REQUEST_START_PERF, time.perf_counter())
+    setattr(request.state, _REQUEST_START_PERF, time.perf_counter() if start is None else start)

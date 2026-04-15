@@ -1,11 +1,19 @@
+import logging
 import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import Response as StarletteResponse
 
-from app.core.access_log import set_request_start_perf
-from app.core import response
-from app.core.settings import get_settings
+from app.core.access_log import (
+    ACCESS_LOG_ENABLE_ATTR,
+    record_api_access_log,
+    set_request_start_perf,
+    update_api_access_log_duration,
+)
+from app.core.response import ApiResponse
+
+logger = logging.getLogger(__name__)
 
 
 def setup_middleware(app: FastAPI) -> None:
@@ -26,50 +34,57 @@ def setup_middleware(app: FastAPI) -> None:
     )
 
     @app.middleware("http")
-    async def limit_request_body(request: Request, call_next):
+    async def finalize_response(request: Request, call_next):
         """
-        超限则直接返回业务错误响应 不进入路由与 JSON 解析
-        此处虽调用 respond_bad_request 但通常不会写入 ApiAccessLog
-        原因是中间件短路返回时 endpoint 常为 None 会被访问日志条件过滤
+        统一响应收尾并在启用时落访问日志
 
         Args:
             request (Request): 请求对象
-            call_next (Callable): 下游处理函数
+            call_next (Callable): 下游处理函数 负责执行后续中间件与路由
 
         Returns:
-            Response: 原样下游响应或 400 统一 JSON
+            Response: 已附加 X-Process-Time 的响应对象
         """
-        limit = get_settings().max_request_body_bytes
-        if limit <= 0:
-            return await call_next(request)
-        raw_cl = request.headers.get("content-length")
-        if raw_cl is None:
-            return await call_next(request)
-        try:
-            length = int(raw_cl.strip())
-        except ValueError:
-            return await call_next(request)
-        if length < 0:
-            return await response.respond_bad_request(request, msg="无效的 Content-Length")
-        if length > limit:
-            return await response.respond_bad_request(request, msg=f"请求体过大，最大限制为 {limit} 字节")
-        return await call_next(request)
-
-    @app.middleware("http")
-    async def add_process_time_header(request: Request, call_next):
-        """
-        写入 X-Process-Time 与访问日志耗时起点
-
-        Args:
-            request (Request): 请求对象
-            call_next (Callable): 下游处理函数
-
-        Returns:
-            Response: 带耗时头的响应对象
-        """
-        set_request_start_perf(request)
+        # 单一起点 同时用于响应头耗时与访问日志耗时
         start_time = time.perf_counter()
+        set_request_start_perf(request, start_time)
+        elapsed_ms: int | None = None
         resp = await call_next(request)
-        elapsed = time.perf_counter() - start_time
-        resp.headers["X-Process-Time"] = f"{elapsed:.6f}"
+        if getattr(request.state, ACCESS_LOG_ENABLE_ATTR, False):
+            # 优先读取已物化的 body 无 body 时尝试消费 body_iterator
+            raw = getattr(resp, "body", None)
+            if raw is None:
+                iterator = getattr(resp, "body_iterator", None)
+                if iterator is not None:
+                    parts: list[bytes] = []
+                    async for chunk in iterator:
+                        parts.append(chunk)
+                    joined = b"".join(parts)
+                    resp = StarletteResponse(
+                        content=joined,
+                        status_code=resp.status_code,
+                        headers=dict(resp.headers),
+                        media_type=resp.media_type,
+                        background=getattr(resp, "background", None),
+                    )
+                    raw = joined
+            if raw is not None:
+                # 仅解析统一 ApiResponse 结构 解析失败仅告警不影响主请求
+                data = raw if isinstance(raw, bytes) else bytes(raw)
+                try:
+                    payload = ApiResponse.model_validate_json(data)
+                    record = await record_api_access_log(request, payload)
+                    if record is not None:
+                        elapsed_ms = int(round((time.perf_counter() - start_time) * 1000))
+                        await update_api_access_log_duration(record.id, elapsed_ms)
+                except Exception:
+                    logger.warning(
+                        f"访问日志解析响应体失败 path={request.url.path} "
+                        f"status={getattr(resp, 'status_code', 'unknown')} "
+                        f"content_type={resp.headers.get('content-type')}",
+                        exc_info=True,
+                    )
+        if elapsed_ms is None:
+            elapsed_ms = int(round((time.perf_counter() - start_time) * 1000))
+        resp.headers["X-Process-Time"] = f"{elapsed_ms / 1000:.6f}"
         return resp

@@ -1,14 +1,14 @@
 import re
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, field_validator
 
 from app.core import access_log
+from app.core.deps import enable_access_log
 from app.core.rate_limit import LOGIN_PER_IP, REGISTER_PER_IP, limiter
+from app.core.response import ApiCode, build_response
 from app.core.settings import get_settings
 from app.services import auth_service
-from app.core import response
-
 
 auth_router = APIRouter()
 settings = get_settings()
@@ -49,14 +49,14 @@ class RegisterRequest(BaseModel):
         return value
 
 
-@auth_router.post("/register")
+@auth_router.post("/register", dependencies=[Depends(enable_access_log)])
 @limiter.limit(REGISTER_PER_IP)
 async def register(request: Request, payload: RegisterRequest):
     """注册"""
     try:
         user = await auth_service.register_user(payload.username, payload.password, payload.nickname)
-        return await response.respond_ok(
-            request,
+        return build_response(
+            ApiCode.OK,
             msg="注册成功",
             data={
                 "user_id": str(user.user_id),
@@ -65,7 +65,7 @@ async def register(request: Request, payload: RegisterRequest):
             },
         )
     except ValueError as exc:
-        return await response.respond_bad_request(request, msg=str(exc))
+        return build_response(ApiCode.BAD_REQUEST, msg=str(exc))
 
 # ============================== 登录 ==============================
 
@@ -89,17 +89,17 @@ class LoginRequest(BaseModel):
         return value
 
 
-@auth_router.post("/login")
+@auth_router.post("/login", dependencies=[Depends(enable_access_log)])
 @limiter.limit(LOGIN_PER_IP)
 async def login(request: Request, payload: LoginRequest):
     """登录"""
     try:
         user = await auth_service.login_user(payload.username, payload.password)
         access_token = auth_service.create_access_token_for_user(user)
-        # 登录请求在中间件阶段尚无 Bearer 令牌，先把 user_id 写到 request.state 供访问日志使用
-        access_log.set_access_log_user_id(request, user.user_id)  
-        return await response.respond_ok(
-            request,
+        # 登录成功后先写入日志 user_id 上下文 仅用于访问日志归属 不参与鉴权判定
+        access_log.set_access_log_user_id(request, user.user_id)
+        return build_response(
+            ApiCode.OK,
             msg="登录成功",
             data={
                 "nickname": user.nickname,
@@ -107,4 +107,4 @@ async def login(request: Request, payload: LoginRequest):
             },
         )
     except ValueError as exc:
-        return await response.respond_bad_request(request, msg=str(exc))
+        return build_response(ApiCode.BAD_REQUEST, msg=str(exc))

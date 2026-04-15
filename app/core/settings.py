@@ -23,20 +23,11 @@ class Settings(BaseSettings):
 
     db_uri: str = "mysql://a2_crazy:wHwszENzAFcwcJAD@gz.crazysand.site:3306/a2_crazy"
 
-    # 是否写入 ApiAccessLog
-    enable_access_log: bool = True
-    # 访问日志白名单 逗号分隔 仅当路径等于某项或为其子路径时才记
-    access_log_whitelist: str = "/api"
-    # 访问日志排除 逗号分隔 命中则不写入 ApiAccessLog 规则同白名单前缀
-    access_log_exclude_paths: str = ""
     # 客户端 IP 解析策略
     # auto 先 X-Real-IP 再无则 request.client
     # x_real_ip 仅用 X-Real-IP
     # direct 仅用 request.client 直连或避免伪造头时使用
     client_ip_source: Literal["auto", "x_real_ip", "direct"] = "auto"
-
-    # 请求体上限 字节 依赖 Content-Length 在 JSON 解析等之前拦截 0 表示关闭
-    max_request_body_bytes: int = 262144
 
 
 @lru_cache

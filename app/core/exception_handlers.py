@@ -4,8 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
-from app.core import response
-from app.core.response import ApiResponseError
+from app.core.response import ApiCode, ApiResponse, ApiResponseError, build_response
 
 
 def _validation_errors_for_response(errors: list) -> list:
@@ -37,6 +36,18 @@ def register_exception_handlers(app: FastAPI) -> None:
         app (FastAPI): 应用实例
     """
 
+    def to_json(payload: ApiResponse) -> JSONResponse:
+        """
+        将统一响应体转换为 HTTP JSON 响应
+
+        Args:
+            payload (ApiResponse): 统一响应体
+
+        Returns:
+            JSONResponse: HTTP 200 JSON 响应
+        """
+        return JSONResponse(status_code=200, content=payload.model_dump(mode="json"))
+
     async def handle_request_validation_error(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
@@ -50,14 +61,19 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 统一响应对象
         """
-        errors = _validation_errors_for_response(jsonable_encoder(exc.errors()))
+        errors = _validation_errors_for_response(
+            jsonable_encoder(exc.errors()))
         first_error = errors[0] if errors else None
         message = "请求参数校验失败"
         if first_error:
             message = first_error.get("msg", message)
 
-        return await response.respond_validation_error(
-            request, msg=message, data=errors
+        return to_json(
+            build_response(
+                ApiCode.VALIDATION_ERROR,
+                msg=message,
+                data=errors,
+            )
         )
 
     async def handle_api_response_error(
@@ -73,7 +89,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 与路由直接 return ApiResponse 时结构一致
         """
-        return await response.respond_json(request, exc.body)
+        return to_json(exc.body)
 
     async def handle_rate_limit_exceeded(
         request: Request, exc: RateLimitExceeded
@@ -92,7 +108,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         msg = "请求过于频繁"
         if detail:
             msg = str(detail)
-        return await response.respond_rate_limited(request, msg=msg)
+        return to_json(
+            build_response(
+                ApiCode.RATE_LIMITED,
+                msg=msg,
+            )
+        )
 
     app.add_exception_handler(RequestValidationError,
                               handle_request_validation_error)

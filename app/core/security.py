@@ -5,7 +5,6 @@ import jwt
 
 from app.core.settings import get_settings
 
-
 settings = get_settings()
 
 JWT_ALGORITHM = "HS256"  # JWT 算法
