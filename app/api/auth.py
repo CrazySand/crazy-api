@@ -63,9 +63,10 @@ async def register(request: Request, payload: RegisterRequest):
                 "username": user.username,
                 "nickname": user.nickname,
             },
+            request=request,
         )
     except ValueError as exc:
-        return build_response(ApiCode.BAD_REQUEST, msg=str(exc))
+        return build_response(ApiCode.BAD_REQUEST, msg=str(exc), request=request)
 
 # ============================== 登录 ==============================
 
@@ -105,6 +106,7 @@ async def login(request: Request, payload: LoginRequest):
                 "nickname": user.nickname,
                 "access_token": access_token,
             },
+            request=request,
         )
     except ValueError as exc:
-        return build_response(ApiCode.BAD_REQUEST, msg=str(exc))
+        return build_response(ApiCode.BAD_REQUEST, msg=str(exc), request=request)

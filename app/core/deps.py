@@ -3,7 +3,6 @@ from uuid import UUID
 
 from fastapi import Depends, Header, Request
 
-from app.core.access_log import set_access_log_user_id
 from app.core.response import raise_unauthorized
 from app.core.security import TokenManager
 from app.models.user import User
@@ -67,26 +66,4 @@ def enable_access_log(request: Request) -> None:
     setattr(request.state, "enable_access_log", True)
 
 
-async def get_current_user_with_access_log(
-    request: Request,
-    user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    """
-    获取当前用户并启用访问日志
-
-    Args:
-        request (Request): 请求对象
-        user (User): 当前登录用户实体
-
-    Returns:
-        User: 当前登录用户实体
-    """
-    enable_access_log(request)
-    set_access_log_user_id(request, user.user_id)
-    return user
-
-
 CurrentUser = Annotated[User, Depends(get_current_user)]
-require_login = Depends(get_current_user)
-CurrentUserWithLog = Annotated[User, Depends(get_current_user_with_access_log)]
-require_login_with_log = Depends(get_current_user_with_access_log)

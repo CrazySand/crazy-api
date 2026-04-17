@@ -1,7 +1,10 @@
 from enum import IntEnum
 from typing import NoReturn
 
+from fastapi import Request
 from pydantic import BaseModel
+
+from app.core.access_log import set_access_log_result
 
 
 class ApiCode(IntEnum):
@@ -37,7 +40,12 @@ class ApiResponseError(Exception):
         super().__init__(body.msg)
 
 
-def build_response(code: ApiCode, msg: str, data: dict | list | None = None) -> ApiResponse:
+def build_response(
+    code: ApiCode,
+    msg: str,
+    data: dict | list | None = None,
+    request: Request | None = None,
+) -> ApiResponse:
     """
     构建统一响应对象
 
@@ -45,10 +53,13 @@ def build_response(code: ApiCode, msg: str, data: dict | list | None = None) -> 
         code (ApiCode): 业务状态码
         msg (str): 响应消息
         data (dict | list | None): 响应数据
+        request (Request | None): 请求对象 缺省时不写日志上下文
 
     Returns:
         ApiResponse: 统一响应对象
     """
+    if request is not None:
+        set_access_log_result(request, code, msg)
     return ApiResponse(code=code, msg=msg, data=data)
 
 

@@ -29,7 +29,7 @@ def get_user_rate_limit_key(request: Request) -> str:
         request (Request): Starlette 请求对象
 
     Returns:
-        str: user:用户 ID 无令牌或解码失败时退回客户端 IP
+        str: user:用户 ID 无令牌或解码失败时退回 ip:客户端 IP
     """
     ip_key = get_client_ip_for_rate_limit(request)
     authorization = request.headers.get("Authorization")

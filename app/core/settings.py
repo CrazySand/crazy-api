@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     password_min_length: int = 8
     password_max_length: int = 16
 
-    db_uri: str = "mysql://a2_crazy:wHwszENzAFcwcJAD@gz.crazysand.site:3306/a2_crazy"
+    db_uri: str = "sqlite://db.sqlite3"
 
     # 客户端 IP 解析策略
     # auto 先 X-Real-IP 再无则 request.client

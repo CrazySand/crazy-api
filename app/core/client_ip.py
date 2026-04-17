@@ -42,9 +42,9 @@ def get_client_ip_for_rate_limit(request: Request) -> str:
         request (Request): 请求对象
 
     Returns:
-        str: 用作限流分桶的 IP 字符串
+        str: 用作限流分桶的 ip:前缀键
     """
     ip = get_client_ip(request)
     if ip:
-        return ip
-    return "127.0.0.1"
+        return f"ip:{ip}"
+    return "ip:127.0.0.1"

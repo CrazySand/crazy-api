@@ -14,3 +14,4 @@ python-dateutil==2.9.0.post0  # dateutil
 openai==2.14.0
 python-multipart==0.0.21
 slowapi==0.1.9
+aiosqlite==0.21.0

@@ -14,9 +14,9 @@ python -m app.main
 
 ## 统一响应约定
 
-业务接口统一返回 `app/core/response.py` 中的 `build_response(...)` 结果（`ApiResponse` 结构：`code`、`msg`、`data`）。异常场景同样返回该结构，便于客户端与日志中间件稳定解析。
+业务接口统一返回 `app/core/response.py` 中的 `build_response(...)` 结果（`ApiResponse` 结构：`code`、`msg`、`data`）。异常场景同样返回该结构。
 
-需要写入 `ApiAccessLog` 的接口须返回可被序列化为 JSON 的 **`ApiResponse`**。`finalize_response` 在启用访问日志时：若已有 **`resp.body`** 则直接解析；否则仅在存在 **`body_iterator`** 时**读完全部块**拼成字节再解析并写库（大体积或真流式响应**勿**挂此依赖，以免内存与首字节延迟）
+当接口启用了访问日志时，建议调用 `build_response(..., request=request)`，将 `api_code` 与 `api_msg` 写入 `request.state`，供中间件落库时直接读取。
 
 ## 请求体与响应体大小
 
@@ -25,8 +25,6 @@ python -m app.main
 ## 访问日志启用方式
 
 `ApiAccessLog` 默认不记录。仅在路由上显式添加依赖 **`Depends(enable_access_log)`** 时，才会在响应返回后按下面流程尝试写入。
-
-**约束**：**大块流式或长连接**路由（如持续 `StreamingResponse`、`EventSourceResponse`）**不要**挂该依赖；中间件会把响应体**完整读入内存**再记日志，不适合无限流或大文件
 
 示例：
 
@@ -42,18 +40,18 @@ async def me(...):
 日志写入流程：
 
 1. 依赖 `enable_access_log` 将 `request.state.enable_access_log` 置为 `True`
-2. 路由返回统一 **`ApiResponse`** 对应的 JSON 响应体
-3. `finalize_response` 取得字节序列（**`body`** 或消费 **`body_iterator`**），解析为 `ApiResponse` 后先创建日志，再按同一请求起点回写最终 `duration_ms`
+2. 路由/异常处理器通过 `build_response(..., request=request)` 将 `api_code`、`api_msg` 写入 `request.state`
+3. `finalize_response` 只计算本次请求 `elapsed_ms`，并读取 `request.state` 中的日志上下文后一次写入 `ApiAccessLog`
 
 说明：登录接口在签发令牌前无 Bearer 头，因此会在路由内通过 `set_access_log_user_id(...)` 先写入 `request.state`，用于日志中的 `user_id`
 
 ## 访问日志字段
 
-启用且成功解析后，记录 `method`、`path`、`duration_ms`、`client_ip`、`api_code`、`api_msg`（来自 `ApiResponse`，`msg` 截断至模型上限，`data` 不入库）。
+启用后，记录 `method`、`path`、`duration_ms`、`client_ip`、`api_code`、`api_msg`。其中 `api_code`/`api_msg` 来自 `request.state` 中的响应上下文（由 `build_response(..., request=request)` 写入，`msg` 会截断至模型上限，`data` 不入库）。
 
-耗时口径：`duration_ms` 与响应头 `X-Process-Time` 使用同一 `elapsed_ms`，均为**全链路耗时**（包含响应解析与访问日志写库）；仅展示单位不同（前者毫秒整数，后者秒小数）。
+耗时口径：`duration_ms` 与响应头 `X-Process-Time` 使用同一 `elapsed_ms`，均为**全链路耗时**（包含访问日志写库）；仅展示单位不同（前者毫秒整数，后者秒小数）。
 
-既无 **`body`** 也无 **`body_iterator`**，或 JSON 不符合 `ApiResponse` 时**不写库**；仅解析失败时输出 `warning`（无 body 且无法迭代时不打 warning）
+若接口未写入响应上下文（例如未通过 `build_response(..., request=request)` 返回），`api_code`/`api_msg` 可能为空，但仍会写入访问日志基础字段。
 
 边界：在 **Nginx** 等网关阶段被拒绝的请求不会进入应用，因此不会触发 `enable_access_log`，也不会写入 `ApiAccessLog`
 

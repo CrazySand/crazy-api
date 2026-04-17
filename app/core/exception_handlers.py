@@ -73,6 +73,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 ApiCode.VALIDATION_ERROR,
                 msg=message,
                 data=errors,
+                request=request,
             )
         )
 
@@ -89,7 +90,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 与路由直接 return ApiResponse 时结构一致
         """
-        return to_json(exc.body)
+        return to_json(build_response(exc.body.code, msg=exc.body.msg, data=exc.body.data, request=request))
 
     async def handle_rate_limit_exceeded(
         request: Request, exc: RateLimitExceeded
@@ -112,6 +113,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             build_response(
                 ApiCode.RATE_LIMITED,
                 msg=msg,
+                request=request,
             )
         )
 
