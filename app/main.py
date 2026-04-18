@@ -42,13 +42,3 @@ app.include_router(api_router)
 @app.get("/health")
 async def health(request: Request):
     return build_response(ApiCode.OK, msg="服务正常", request=request)
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.reload,
-    )

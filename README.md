@@ -7,7 +7,7 @@ FastAPI 后端，提供用户注册登录（JWT）、统一 JSON 业务码响应
 Python 版本见 `requirements.txt` 注释。安装依赖后：
 
 ```bash
-python -m app.main
+python -m app
 ```
 
 配置可通过环境变量覆盖，敏感项如 `JWT_SECRET`、`DB_URI` 见 `app/core/settings.py`。
