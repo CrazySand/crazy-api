@@ -1,0 +1,24 @@
+[project]
+name = "crazy-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiomysql==0.3.2",
+    "aiosqlite==0.21.0",
+    "argon2-cffi==25.1.0",
+    "asyncpg==0.31.0",
+    "captcha==0.7.1",
+    "cryptography==46.0.3",
+    "fastapi==0.125.0",
+    "httpx==0.28.1",
+    "openai==2.14.0",
+    "pydantic-settings==2.12.0",
+    "pyjwt==2.10.1",
+    "python-dateutil==2.9.0.post0",
+    "python-multipart==0.0.21",
+    "slowapi==0.1.9",
+    "tortoise-orm==0.25.2",
+    "uvicorn==0.38.0",
+]
