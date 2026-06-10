@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
@@ -7,24 +6,53 @@ from slowapi.errors import RateLimitExceeded
 from app.core.response import ApiCode, ApiResponse, ApiResponseError, build_response
 
 
-def _validation_errors_for_response(errors: list) -> list:
+def _validation_error_message(error: dict) -> str:
     """
-    剔除校验错误中 Pydantic 的 input 字段，避免超大或恶意内容回显。
+    从 Pydantic 原始 error 项提取面向用户的消息。
 
     Args:
-        errors (list): jsonable_encoder 后的错误项列表。
+        error (dict): exc.errors() 中的单项。
 
     Returns:
-        list: 每项为已去掉 input 的 dict 副本。
+        str: 用户可见的校验提示。
+    """
+    ctx = error.get("ctx")
+    if isinstance(ctx, dict):
+        inner = ctx.get("error")
+        if isinstance(inner, BaseException):
+            if inner.args:
+                return str(inner.args[0])
+            return str(inner)
+
+    msg = error.get("msg", "请求参数校验失败")
+    if error.get("type") == "value_error" and msg.startswith("Value error, "):
+        return msg.removeprefix("Value error, ")
+    return msg
+
+
+def _validation_errors_for_response(raw_errors: list) -> list:
+    """
+    将 Pydantic 原始 errors 转为可返回客户端的结构。
+
+    剔除 input、ctx、url，msg 使用用户可见文案。
+
+    Args:
+        raw_errors (list): exc.errors() 返回值。
+
+    Returns:
+        list: 每项仅含 type、loc、msg。
     """
     out: list = []
-    for item in errors:
-        if isinstance(item, dict):
-            out.append(
-                {k: v for k, v in item.items() if k != "input"}
-            )
-        else:
-            out.append(item)
+    for item in raw_errors:
+        if not isinstance(item, dict):
+            continue
+        out.append(
+            {
+                "type": item.get("type"),
+                "loc": list(item.get("loc", ())),
+                "msg": _validation_error_message(item),
+            }
+        )
     return out
 
 
@@ -61,12 +89,13 @@ def register_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 统一响应对象。
         """
-        errors = _validation_errors_for_response(
-            jsonable_encoder(exc.errors()))
-        first_error = errors[0] if errors else None
-        message = "请求参数校验失败"
-        if first_error:
-            message = first_error.get("msg", message)
+        raw_errors = exc.errors()
+        errors = _validation_errors_for_response(raw_errors)
+        message = (
+            _validation_error_message(raw_errors[0])
+            if raw_errors
+            else "请求参数校验失败"
+        )
 
         return to_json(
             build_response(
