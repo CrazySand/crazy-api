@@ -26,15 +26,15 @@ class ApiResponse(BaseModel):
 
 class ApiResponseError(Exception):
     """
-    携带统一 ApiResponse 的业务异常 供全局处理器序列化后返回客户端
+    携带统一 ApiResponse 的业务异常，供全局处理器序列化后返回客户端。
     """
 
     def __init__(self, body: ApiResponse) -> None:
         """
-        绑定待返回的统一响应体
+        绑定待返回的统一响应体。
 
         Args:
-            body (ApiResponse): 与 response 模块工厂函数构造结果一致
+            body (ApiResponse): 与 response 模块工厂函数构造结果一致。
         """
         self.body = body
         super().__init__(body.msg)
@@ -47,16 +47,16 @@ def build_response(
     request: Request | None = None,
 ) -> ApiResponse:
     """
-    构建统一响应对象
+    构建统一响应对象。
 
     Args:
-        code (ApiCode): 业务状态码
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
-        request (Request | None): 请求对象 缺省时不写日志上下文
+        code (ApiCode): 业务状态码。
+        msg (str): 响应消息。
+        data (dict | list | None): 响应数据。
+        request (Request | None): 请求对象，缺省时不写日志上下文。
 
     Returns:
-        ApiResponse: 统一响应对象
+        ApiResponse: 统一响应对象。
     """
     if request is not None:
         set_access_log_result(request, code, msg)
@@ -68,13 +68,13 @@ def raise_unauthorized(
     data: dict | list | None = None,
 ) -> NoReturn:
     """
-    抛出未认证 ApiResponseError 供全局异常处理器序列化为 HTTP 响应
+    抛出未认证 ApiResponseError，供全局异常处理器序列化为 HTTP 响应。
 
     Args:
-        msg (str): 响应消息
-        data (dict | list | None): 响应数据
+        msg (str): 响应消息。
+        data (dict | list | None): 响应数据。
 
     Raises:
-        ApiResponseError: 始终抛出 且 body 为未认证业务码
+        ApiResponseError: 始终抛出，且 body 为未认证业务码。
     """
     raise ApiResponseError(build_response(ApiCode.UNAUTHORIZED, msg, data))

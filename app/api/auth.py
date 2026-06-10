@@ -41,7 +41,7 @@ class RegisterRequest(BaseModel):
 
     @field_validator("nickname")
     def validate_nickname(cls, value: str) -> str:
-        value = value.strip()  # 去除前后空白字符
+        value = value.strip()  # 去除首尾空白
         if len(value) < 1 or len(value) > 24:
             raise ValueError("昵称长度必须为1-24个字符")
         if not all(ch.isprintable() for ch in value):
@@ -97,7 +97,7 @@ async def login(request: Request, payload: LoginRequest):
     try:
         user = await auth_service.login_user(payload.username, payload.password)
         access_token = auth_service.create_access_token_for_user(user)
-        # 登录成功后先写入日志 user_id 上下文 仅用于访问日志归属 不参与鉴权判定
+        # 登录成功后先写入日志 user_id 上下文，仅用于访问日志归属，不参与鉴权判定。
         access_log.set_access_log_user_id(request, user.user_id)
         return build_response(
             ApiCode.OK,

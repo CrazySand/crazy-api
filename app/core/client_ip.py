@@ -5,13 +5,13 @@ from app.core.settings import get_settings
 
 def get_client_ip(request: Request) -> str | None:
     """
-    按配置解析客户端 IP 供日志与限流分桶
+    按配置解析客户端 IP，供日志与限流分桶。
 
     Args:
-        request (Request): 请求对象
+        request (Request): 请求对象。
 
     Returns:
-        str | None: 客户端 IP 无则 None
+        str | None: 客户端 IP，无则为 None。
     """
     settings = get_settings()
     src = settings.client_ip_source
@@ -25,7 +25,7 @@ def get_client_ip(request: Request) -> str | None:
             return raw.strip()
         return None
 
-    # auto 先 X-Real-IP 再无则 request.client
+    # auto：先 X-Real-IP，再无则 request.client
     raw = request.headers.get("x-real-ip")
     if raw:
         return raw.strip()
@@ -36,13 +36,13 @@ def get_client_ip(request: Request) -> str | None:
 
 def get_client_ip_for_rate_limit(request: Request) -> str:
     """
-    供 SlowAPI key_func 使用 保证返回非空字符串
+    供 SlowAPI key_func 使用，保证返回非空字符串。
 
     Args:
-        request (Request): 请求对象
+        request (Request): 请求对象。
 
     Returns:
-        str: 用作限流分桶的 ip:前缀键
+        str: 用作限流分桶的 ip: 前缀键。
     """
     ip = get_client_ip(request)
     if ip:

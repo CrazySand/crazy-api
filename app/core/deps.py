@@ -15,16 +15,16 @@ async def get_current_user(
     ] = None,
 ) -> User:
     """
-    从 Authorization 头解析并校验当前用户
+    从 Authorization 头解析并校验当前用户。
 
     Args:
-        authorization (str | None): 原始 Authorization 头值
+        authorization (str | None): 原始 Authorization 头值。
 
     Returns:
-        User: 当前登录用户实体
+        User: 当前登录用户实体。
 
     Raises:
-        ApiResponseError: 未携带令牌、格式非法或校验失败（响应体为未认证等业务码）
+        ApiResponseError: 未携带令牌、格式非法或校验失败时抛出，响应体为未认证等业务码。
     """
     if not authorization or not authorization.startswith("Bearer "):
         raise_unauthorized("未携带令牌或格式非法")
@@ -58,10 +58,10 @@ async def get_current_user(
 
 def enable_access_log(request: Request) -> None:
     """
-    启用当前请求访问日志
+    启用当前请求访问日志。
 
     Args:
-        request (Request): 请求对象
+        request (Request): 请求对象。
     """
     setattr(request.state, "enable_access_log", True)
 

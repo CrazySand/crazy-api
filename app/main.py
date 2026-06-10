@@ -16,7 +16,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """生命周期管理"""
+    """应用生命周期管理"""
     await Tortoise.init(
         db_url=settings.db_uri,
         modules={"models": ["app.models"]},

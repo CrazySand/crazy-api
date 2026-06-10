@@ -19,20 +19,20 @@ password_hasher = argon2.PasswordHasher(
 
 
 class PasswordManager:
-    """高性能密码管理工具类"""
+    """密码哈希与校验工具类"""
 
     @staticmethod
     def hash(password: str) -> str:
         """
-        生成密码哈希
+        生成密码哈希。
 
         Args:
-            password (str): 明文密码
+            password (str): 明文密码。
 
         Returns:
-            str: 哈希后的密码字符串
+            str: 哈希后的密码字符串。
         """
-        # argon2 允许空密码，但出于安全考虑，这里禁止空密码
+        # argon2 允许空密码，但出于安全考虑，此处禁止空密码。
         if not password.strip():
             raise ValueError("密码不能为空或仅包含空白字符")
         return password_hasher.hash(password)
@@ -40,14 +40,14 @@ class PasswordManager:
     @staticmethod
     def verify(hashed_password: str, plain_password: str) -> bool:
         """
-        校验密码是否匹配
+        校验密码是否匹配。
 
         Args:
-            hashed_password (str): 哈希后的密码
-            plain_password (str): 明文密码
+            hashed_password (str): 哈希后的密码。
+            plain_password (str): 明文密码。
 
         Returns:
-            bool: 是否匹配
+            bool: 是否匹配。
         """
         try:
             return password_hasher.verify(hashed_password, plain_password)
@@ -60,21 +60,21 @@ class PasswordManager:
 
 
 class TokenManager:
-    """用户令牌管理工具类"""
+    """JWT 访问令牌管理工具类"""
 
     @staticmethod
     def decode(token: str) -> dict | None:
         """
-        解码访问令牌
+        解码访问令牌。
 
         Args:
-            token (str): 待解码的令牌
+            token (str): 待解码的令牌。
 
         Returns:
-            dict: 解析后的令牌信息
-                - user_id (str): 用户 ID
-                - token_version (int): Token 版本号
-            None: 令牌无效或已过期
+            dict: 解析后的令牌信息。
+                - user_id (str): 用户 ID。
+                - token_version (int): Token 版本号。
+            None: 令牌无效或已过期。
         """
         try:
             decoded = jwt.decode(
@@ -88,22 +88,22 @@ class TokenManager:
                 "user_id": user_id,
                 "token_version": token_version,
             }
-        # ExpiredSignatureError 表示令牌已过期 InvalidTokenError 表示令牌格式或签名等无效
+        # ExpiredSignatureError 表示令牌已过期，InvalidTokenError 表示令牌格式或签名等无效。
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return None
 
     @staticmethod
     def generate(user_id: str, token_version: int, expires_in: int | None = None) -> str:
         """
-        生成访问令牌
+        生成访问令牌。
 
         Args:
-            user_id (str): 用户 ID
-            token_version (int): Token 版本号
-            expires_in (int | None): 过期时间秒数
+            user_id (str): 用户 ID。
+            token_version (int): Token 版本号。
+            expires_in (int | None): 过期时间秒数。
 
         Returns:
-            str: 编码后的访问令牌
+            str: 编码后的访问令牌。
         """
         now = datetime.now(timezone.utc)
         expire = now + timedelta(seconds=expires_in or settings.jwt_ttl)
@@ -111,10 +111,10 @@ class TokenManager:
         to_encode = {
             "sub": user_id,
             "iat": int(now.timestamp()),
-            # exp 是过期时间戳，在后续的 jwt 解码中会被检查
-            # 如果当前时间大于过期时间，则 token 无效，抛出 jwt.ExpiredSignatureError
+            # exp 为过期时间戳，后续 jwt 解码时会校验。
+            # 若当前时间超过过期时间，则 token 无效并抛出 jwt.ExpiredSignatureError。
             "exp": int(expire.timestamp()),
-            "token_version": token_version,  # 用于实现 token 作废功能
+            "token_version": token_version,  # token 作废版本号
         }
 
         access_token = jwt.encode(

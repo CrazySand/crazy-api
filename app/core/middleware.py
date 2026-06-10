@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 def setup_middleware(app: FastAPI) -> None:
     """
-    配置应用中间件
+    配置应用中间件。
 
     Args:
-        app (FastAPI): 应用实例
+        app (FastAPI): 应用实例。
     """
     app.add_middleware(
         CORSMiddleware,
@@ -33,16 +33,16 @@ def setup_middleware(app: FastAPI) -> None:
     @app.middleware("http")
     async def finalize_response(request: Request, call_next):
         """
-        统一响应收尾并在启用时落访问日志
+        统一响应收尾，并在启用时落访问日志。
 
         Args:
-            request (Request): 请求对象
-            call_next (Callable): 下游处理函数 负责执行后续中间件与路由
+            request (Request): 请求对象。
+            call_next (Callable): 下游处理函数，负责执行后续中间件与路由。
 
         Returns:
-            Response: 已附加 X-Process-Time 的响应对象
+            Response: 已附加 X-Process-Time 的响应对象。
         """
-        # 单一起点 同时用于响应头耗时与访问日志耗时
+        # 单一起点，同时用于响应头耗时与访问日志耗时。
         start_time = time.perf_counter()
         set_request_start_perf(request, start_time)
         resp = await call_next(request)

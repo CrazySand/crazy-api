@@ -19,23 +19,23 @@ ACCESS_LOG_API_MSG_ATTR = "access_log_api_msg"
 
 def set_access_log_user_id(request: Request, user_id: UUID) -> None:
     """
-    将业务 user_id 写入 request.state 供访问日志在无 Bearer 时使用
+    将业务 user_id 写入 request.state，供访问日志在无 Bearer 时使用。
 
     Args:
-        request (Request): 请求对象
-        user_id (UUID): 业务用户 ID
+        request (Request): 请求对象。
+        user_id (UUID): 业务用户 ID。
     """
     setattr(request.state, ACCESS_LOG_USER_ID_ATTR, user_id)
 
 
 def set_access_log_result(request: Request, api_code: int, api_msg: str | None) -> None:
     """
-    将业务响应码与消息写入 request.state 供访问日志使用
+    将业务响应码与消息写入 request.state，供访问日志使用。
 
     Args:
-        request (Request): 请求对象
-        api_code (int): 业务响应码
-        api_msg (str | None): 业务响应消息
+        request (Request): 请求对象。
+        api_code (int): 业务响应码。
+        api_msg (str | None): 业务响应消息。
     """
     setattr(request.state, ACCESS_LOG_API_CODE_ATTR, api_code)
     setattr(request.state, ACCESS_LOG_API_MSG_ATTR, api_msg[:512] if api_msg else None)
@@ -43,13 +43,13 @@ def set_access_log_result(request: Request, api_code: int, api_msg: str | None) 
 
 def _resolve_access_log_result(request: Request) -> tuple[int, str | None]:
     """
-    解析访问日志中的业务响应码与消息
+    解析访问日志中的业务响应码与消息。
 
     Args:
-        request (Request): 请求对象
+        request (Request): 请求对象。
 
     Returns:
-        tuple[int, str | None]: 业务响应码与消息
+        tuple[int, str | None]: 业务响应码与消息。
     """
     raw_code: int = getattr(request.state, ACCESS_LOG_API_CODE_ATTR, None)
     api_msg = getattr(request.state, ACCESS_LOG_API_MSG_ATTR, None)
@@ -58,13 +58,13 @@ def _resolve_access_log_result(request: Request) -> tuple[int, str | None]:
 
 def _resolve_access_log_user_id(request: Request) -> UUID | None:
     """
-    解析访问日志中的用户 ID state 优先 否则 JWT
+    解析访问日志中的用户 ID，state 优先，否则回退 JWT。
 
     Args:
-        request (Request): 请求对象
+        request (Request): 请求对象。
 
     Returns:
-        UUID | None: 可解析时返回 否则 None
+        UUID | None: 可解析时返回用户 ID，否则为 None。
     """
     raw = getattr(request.state, ACCESS_LOG_USER_ID_ATTR, None)
     if raw is not None:
@@ -79,13 +79,13 @@ def _resolve_access_log_user_id(request: Request) -> UUID | None:
 
 def _should_record(request: Request) -> bool:
     """
-    判断本次请求是否应写入 ApiAccessLog
+    判断本次请求是否应写入 ApiAccessLog。
 
     Args:
-        request (Request): 请求对象
+        request (Request): 请求对象。
 
     Returns:
-        bool: 为 True 时写入
+        bool: 为 True 时写入。
     """
     if not getattr(request.state, ACCESS_LOG_ENABLE_ATTR, False):
         return False
@@ -94,13 +94,13 @@ def _should_record(request: Request) -> bool:
 
 def _bearer_user_id(request: Request) -> UUID | None:
     """
-    从 Authorization Bearer JWT 中解析业务 user_id
+    从 Authorization Bearer JWT 中解析业务 user_id。
 
     Args:
-        request (Request): 请求对象
+        request (Request): 请求对象。
 
     Returns:
-        UUID | None: JWT 合法且含 sub 时返回 否则 None
+        UUID | None: JWT 合法且含 sub 时返回用户 ID，否则为 None。
     """
     authorization = request.headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
@@ -119,14 +119,14 @@ def _bearer_user_id(request: Request) -> UUID | None:
 
 async def record_api_access_log(request: Request, duration_ms: int) -> ApiAccessLog | None:
     """
-    将当前请求写入 ApiAccessLog 并返回记录对象
+    将当前请求写入 ApiAccessLog 并返回记录对象。
 
     Args:
-        request (Request): 请求对象
-        duration_ms (int): 全链路耗时毫秒
+        request (Request): 请求对象。
+        duration_ms (int): 全链路耗时毫秒。
 
     Returns:
-        ApiAccessLog | None: 写入成功返回记录 否则 None
+        ApiAccessLog | None: 写入成功返回记录，否则为 None。
     """
     if not _should_record(request):
         return None
@@ -149,10 +149,10 @@ async def record_api_access_log(request: Request, duration_ms: int) -> ApiAccess
 
 def set_request_start_perf(request: Request, start: float | None = None) -> None:
     """
-    在请求进入时写入 perf 起点供访问日志计算耗时
+    在请求进入时写入 perf 起点，供访问日志计算耗时。
 
     Args:
-        request (Request): 请求对象
-        start (float | None): 调用方传入的 perf 起点 缺省时取当前时刻
+        request (Request): 请求对象。
+        start (float | None): 调用方传入的 perf 起点，缺省时取当前时刻。
     """
     setattr(request.state, _REQUEST_START_PERF, time.perf_counter() if start is None else start)

@@ -9,13 +9,13 @@ from app.core.response import ApiCode, ApiResponse, ApiResponseError, build_resp
 
 def _validation_errors_for_response(errors: list) -> list:
     """
-    剔除校验错误中 Pydantic 的 input 字段 避免超大或恶意内容回显
+    剔除校验错误中 Pydantic 的 input 字段，避免超大或恶意内容回显。
 
     Args:
-        errors (list): jsonable_encoder 后的错误项列表
+        errors (list): jsonable_encoder 后的错误项列表。
 
     Returns:
-        list: 每项为已去掉 input 的 dict 副本
+        list: 每项为已去掉 input 的 dict 副本。
     """
     out: list = []
     for item in errors:
@@ -30,21 +30,21 @@ def _validation_errors_for_response(errors: list) -> list:
 
 def register_exception_handlers(app: FastAPI) -> None:
     """
-    注册全局异常处理器
+    注册全局异常处理器。
 
     Args:
-        app (FastAPI): 应用实例
+        app (FastAPI): 应用实例。
     """
 
     def to_json(payload: ApiResponse) -> JSONResponse:
         """
-        将统一响应体转换为 HTTP JSON 响应
+        将统一响应体转换为 HTTP JSON 响应。
 
         Args:
-            payload (ApiResponse): 统一响应体
+            payload (ApiResponse): 统一响应体。
 
         Returns:
-            JSONResponse: HTTP 200 JSON 响应
+            JSONResponse: HTTP 200 JSON 响应。
         """
         return JSONResponse(status_code=200, content=payload.model_dump(mode="json"))
 
@@ -52,14 +52,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         """
-        处理请求参数校验异常
+        处理请求参数校验异常。
 
         Args:
-            request (Request): 请求对象
-            exc (RequestValidationError): 参数校验异常
+            request (Request): 请求对象。
+            exc (RequestValidationError): 参数校验异常。
 
         Returns:
-            JSONResponse: 统一响应对象
+            JSONResponse: 统一响应对象。
         """
         errors = _validation_errors_for_response(
             jsonable_encoder(exc.errors()))
@@ -81,14 +81,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: ApiResponseError
     ) -> JSONResponse:
         """
-        将 ApiResponseError 转为 HTTP JSON 响应
+        将 ApiResponseError 转为 HTTP JSON 响应。
 
         Args:
-            request (Request): 请求对象
-            exc (ApiResponseError): 携带统一响应体的异常
+            request (Request): 请求对象。
+            exc (ApiResponseError): 携带统一响应体的异常。
 
         Returns:
-            JSONResponse: 与路由直接 return ApiResponse 时结构一致
+            JSONResponse: 与路由直接 return ApiResponse 时结构一致。
         """
         return to_json(build_response(exc.body.code, msg=exc.body.msg, data=exc.body.data, request=request))
 
@@ -96,14 +96,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: RateLimitExceeded
     ) -> JSONResponse:
         """
-        将 SlowAPI 限流异常转为统一 JSON 响应
+        将 SlowAPI 限流异常转为统一 JSON 响应。
 
         Args:
-            request (Request): 请求对象
-            exc (RateLimitExceeded): 限流异常
+            request (Request): 请求对象。
+            exc (RateLimitExceeded): 限流异常。
 
         Returns:
-            JSONResponse: 业务码 RATE_LIMITED
+            JSONResponse: 业务码 RATE_LIMITED。
         """
         detail = getattr(exc, "detail", None)
         msg = "请求过于频繁"
